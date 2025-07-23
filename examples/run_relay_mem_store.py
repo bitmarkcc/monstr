@@ -6,7 +6,7 @@ from monstr.event.persist_memory import RelayMemoryEventStore
 
 async def run_relay():
     r = Relay(store=RelayMemoryEventStore())
-    await r.start()
+    await r.start(port=8090)
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

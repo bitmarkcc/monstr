@@ -2,6 +2,7 @@ import asyncio
 import logging
 import argparse
 import sys
+import json
 from pathlib import Path
 from monstr.util import util_funcs
 from monstr.client.client import Client, ClientPool
@@ -14,7 +15,7 @@ from monstr.ident.alias import ProfileFileAlias
 # working directory it'll be created it it doesn't exist
 WORK_DIR = f'{Path.home()}/.nostrpy/'
 #  relay to query
-DEFAULT_RELAY = 'ws://localhost:8080'
+DEFAULT_RELAY = 'ws://localhost:8090'
 # max time we'll wait for the query to complete
 DEFAULT_TIMEOUT = 10
 # limit on number of returned results
@@ -34,6 +35,12 @@ def parse_filter(parse_args):
                 raise ConfigError('kinds values must be integer, found %s' % c_kind)
                 sys.exit(2)
         parse_args.kinds = q_kinds
+
+    if parse_args.ids:
+        q_ids = []
+        for c_id in parse_args.ids.split(','):
+            q_ids.append(c_id)
+        parse_args.ids = q_ids
 
     # if any author keys make sure they're ok and convert to key objects
     if parse_args.authors:
@@ -70,6 +77,8 @@ def get_args():
                         help='comma separated kinds to query - default any')
     parser.add_argument('-a', '--authors', action='store', default=None,
                         help='comma separated list or author keys, can be nsec, npub, public hex or alias')
+    parser.add_argument('-i', '--ids', action='store', default=None,
+                        help='comma separated list of ids to query')
     parser.add_argument('-o', '--output', choices=['heads', 'full', 'raw'], default='full',
                         help='format to output events. heads - event_id@time, '
                              'full - includes event content, raw - the raw json str')
@@ -111,6 +120,8 @@ async def do_query(args):
         c_k: Keys
         my_query['authors'] = [c_k.public_key_hex() for c_k in args.authors]
         key_map = {c_k.public_key_hex(): c_k for c_k in args.authors}
+    if args.ids:
+        my_query['ids'] = args.ids
 
     async with ClientPool(args.relay.split(','),
                           query_timeout=args.timeout,
@@ -129,7 +140,7 @@ async def do_query(args):
         else:
             for c_evt in events:
                 if args.output == 'raw':
-                    print(c_evt.event_data())
+                    print(json.dumps(c_evt.data()))
                 else:
                     if args.output in ('full', 'heads'):
                         print(c_evt)

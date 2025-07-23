@@ -9,6 +9,7 @@ from aiohttp import WSCloseCode
 from aiohttp import web, http_websocket
 import json
 from json import JSONDecodeError
+import os
 from monstr.event.event import Event
 from monstr.event.persist import RelayEventStoreInterface, ARelayEventStoreInterface
 from monstr.encrypt import Keys
@@ -370,6 +371,9 @@ class Relay:
             await self._do_send(ws=ws,
                                 data=err)
 
+    async def mark_event(self, eid):
+        os.system("/bin/bash /home/coins/scripts/mark-note.sh '"+eid+"' &")
+
     async def _do_event(self, req_json, ws):
         if len(req_json) <= 1:
             raise NostrNoticeException('EVENT command missing event data')
@@ -400,6 +404,8 @@ class Relay:
 
         # do the subs
         await self._check_subs(evt)
+
+        await self.mark_event(evt.id) # mark it in the Bitmark blockchain
 
         raise NostrCommandException(event_id=evt.id,
                                     success=saved,
